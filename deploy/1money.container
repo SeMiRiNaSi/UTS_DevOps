@@ -7,7 +7,7 @@ Description=1Money (container Podman)
 After=network-online.target
 
 [Container]
-Image=ghcr.io/<owner>/<repo>:latest
+Image=ghcr.io/mirandandllaptr-27/1money:latest
 ContainerName=1money
 PublishPort=8080:8000
 Volume=1money-data:/data:Z
