@@ -1,0 +1,18 @@
+# Jalankan dengan:
+#   docker compose up -d --build
+#   podman-compose up -d --build   (atau: podman compose up -d --build)
+services:
+  web:
+    build: .
+    image: 1money:local
+    container_name: 1money
+    ports:
+      - "8080:8000"
+    environment:
+      APP_VERSION: "compose"
+    volumes:
+      - kas-data:/data
+    restart: unless-stopped
+
+volumes:
+  kas-data:

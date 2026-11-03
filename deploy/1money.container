@@ -1,0 +1,20 @@
+# Podman Quadlet (cara Red Hat menjalankan container sebagai service systemd).
+# Salin ke:  ~/.config/containers/systemd/1money.container   (rootless)
+# Lalu:      systemctl --user daemon-reload && systemctl --user start 1money
+# Ganti <owner>/<repo> dengan nama repo GitHub kelompok (huruf kecil).
+[Unit]
+Description=1Money (container Podman)
+After=network-online.target
+
+[Container]
+Image=ghcr.io/<owner>/<repo>:latest
+ContainerName=1money
+PublishPort=8080:8000
+Volume=1money-data:/data:Z
+AutoUpdate=registry
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target
