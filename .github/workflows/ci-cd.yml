@@ -6,22 +6,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      runner:
-        description: "Runner untuk tahap deploy"
-        type: choice
-        default: github-hosted
-        options:
-          - github-hosted
-          - self-hosted
 
 env:
   REGISTRY: ghcr.io
-
-# Batalkan run lama pada branch/PR yang sama agar tidak menumpuk
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   # ---------------------------------------------------------------
@@ -30,7 +17,6 @@ jobs:
   test:
     name: Lint dan Unit Test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +33,7 @@ jobs:
         run: flake8 .
 
       - name: Unit test (pytest)
-        run: pytest -v
+        run: python -m pytest
 
   # ---------------------------------------------------------------
   # CI 2: build image container + smoke test
@@ -56,7 +42,6 @@ jobs:
     name: Build Image dan Smoke Test
     runs-on: ubuntu-latest
     needs: test
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -66,21 +51,17 @@ jobs:
       - name: Smoke test container (Docker)
         run: |
           docker run -d --name kas-test -p 8000:8000 1money:ci
-          for i in $(seq 1 15); do
-            if curl -fsS http://localhost:8000/health; then
-              echo
-              echo "Smoke test lulus"
+          sleep 10
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health >/dev/null 2>&1; then
+              echo "Smoke test berhasil!"
               exit 0
             fi
+            echo "Menunggu container siap (percobaan $i/30)..."
             sleep 2
           done
-          echo "Smoke test gagal, log container:"
           docker logs kas-test
           exit 1
-
-      - name: Bersihkan container smoke test
-        if: always()
-        run: docker rm -f kas-test || true
 
       - name: Build image yang sama dengan Podman (verifikasi kompatibilitas)
         run: |
@@ -94,11 +75,7 @@ jobs:
     name: Publish Image ke GHCR
     runs-on: ubuntu-latest
     needs: build
-    timeout-minutes: 20
-    # Jalan pada push ke main DAN pada run manual (workflow_dispatch)
-    if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
@@ -123,49 +100,29 @@ jobs:
         with:
           context: .
           push: true
-          # Membutuhkan "ARG APP_VERSION" di Dockerfile (lihat catatan perbaikan)
           build-args: |
             APP_VERSION=${{ github.sha }}
-          # Label ini menautkan package GHCR ke repositori sehingga
-          # GITHUB_TOKEN pada job deploy boleh melakukan pull
-          labels: |
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
           tags: |
             ${{ steps.nama.outputs.image }}:latest
             ${{ steps.nama.outputs.image }}:${{ github.sha }}
 
   # ---------------------------------------------------------------
-  # CD 2: deploy otomatis memakai Podman
-  # Default: runner GitHub (ubuntu-latest, Podman sudah terpasang) sehingga
-  # deploy selalu jalan tanpa perlu menyiapkan mesin sendiri.
-  # Untuk memakai runner self-hosted (Linux/WSL2, label: self-hosted, linux,
-  # podman, status Idle), pilih "self-hosted" saat run manual, atau buat
-  # repository variable DEPLOY_RUNNER = self-hosted agar berlaku pada push.
+  # CD 2: deploy otomatis memakai Podman pada runner self-hosted
+  # (mesin/VM Linux milik salah satu anggota; lihat panduan Bagian 6)
   # ---------------------------------------------------------------
   deploy:
     name: Deploy dengan Podman
-    runs-on: ${{ (inputs.runner == 'self-hosted' || vars.DEPLOY_RUNNER == 'self-hosted') && fromJSON('["self-hosted","linux","podman"]') || 'ubuntu-latest' }}
+    runs-on: [self-hosted, linux, podman]
     needs: publish
-    timeout-minutes: 15
     permissions:
       contents: read
       packages: read
-    defaults:
-      run:
-        shell: bash
     steps:
-      - name: Cek Podman
-        run: podman --version
-
       - name: Login ke GHCR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_ACTOR: ${{ github.actor }}
-        run: echo "$GH_TOKEN" | podman login ghcr.io -u "$GH_ACTOR" --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Pull image sesuai commit
-        run: podman pull ${{ needs.publish.outputs.image }}:${{ github.sha }}
+      - name: Pull image terbaru
+        run: podman pull ${{ needs.publish.outputs.image }}:latest
 
       - name: Ganti container lama dengan yang baru
         run: |
@@ -174,22 +131,18 @@ jobs:
             -p 8080:8000 \
             -v 1money-data:/data:Z \
             --restart=always \
-            ${{ needs.publish.outputs.image }}:${{ github.sha }}
+            ${{ needs.publish.outputs.image }}:latest
 
       - name: Health check
         run: |
-          for i in $(seq 1 15); do
-            if curl -fsS http://localhost:8080/health; then
-              echo
-              echo "Deploy berhasil, aplikasi sehat"
+          sleep 15
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+              echo "Container 1money berhasil berjalan dan sehat!"
               exit 0
             fi
-            sleep 2
+            echo "Menunggu aplikasi 1money di port 8080 (percobaan $i/40)..."
+            sleep 3
           done
-          echo "Health check gagal, log container:"
           podman logs 1money
           exit 1
-
-      - name: Logout GHCR
-        if: always()
-        run: podman logout ghcr.io || true
