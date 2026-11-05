@@ -33,7 +33,7 @@ jobs:
         run: flake8 .
 
       - name: Unit test (pytest)
-        run: pytest -v
+        run: python -m pytest
 
   # ---------------------------------------------------------------
   # CI 2: build image container + smoke test
