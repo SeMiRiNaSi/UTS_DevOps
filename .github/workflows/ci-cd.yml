@@ -109,41 +109,58 @@ jobs:
   # ---------------------------------------------------------------
   # CD 2: deploy otomatis memakai Podman pada runner self-hosted
   # ---------------------------------------------------------------
-  deploy:
+    deploy:
     name: Deploy dengan Podman
     runs-on: [self-hosted, linux, podman]
     needs: publish
+
     permissions:
       contents: read
       packages: read
+
     steps:
       - name: Login ke GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io \
+            -u "${{ github.actor }}" \
+            --password-stdin
 
       - name: Pull image terbaru
-        run: podman pull ${{ needs.publish.outputs.image }}:latest
+        run: |
+          podman pull ${{ needs.publish.outputs.image }}:latest
 
-      - name: Ganti container lama dengan yang baru secara otomatis
+      - name: Ganti container lama dengan yang baru
         run: |
           podman rm -f 1money || true
-          podman run -d --name 1money \
+
+          podman run -d \
+            --name 1money \
+            --network bridge \
             -p 8080:8000 \
             -v 1money-data:/data:Z \
             ${{ needs.publish.outputs.image }}:latest
 
-      - name: Health check otomatis
+      - name: Health check
         run: |
-          sleep 10
+          echo "Menunggu aplikasi 1Money..."
+          sleep 5
+
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8080/health >/dev/null 2>&1; then
-              echo "Container 1money berhasil berjalan dan sehat!"
+              echo "=================================="
+              echo "1Money berhasil berjalan!"
+              echo "=================================="
               exit 0
             fi
-            echo "Menunggu aplikasi 1money di port 8080 (percobaan $i/30)..."
-            sleep 3
+
+            echo "Menunggu aplikasi... percobaan $i/30"
+            sleep 2
           done
-          echo "=== STATUS CONTAINER SAAT GAGAL ==="
+
+          echo "=== STATUS CONTAINER ==="
           podman ps -a
-          echo "=== LOG ERROR CONTAINER ==="
+
+          echo "=== LOG CONTAINER ==="
           podman logs 1money
+
           exit 1
