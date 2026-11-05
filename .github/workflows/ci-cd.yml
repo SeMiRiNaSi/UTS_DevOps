@@ -151,7 +151,7 @@ jobs:
 
           podman run -d \
             --name 1money \
-            --network bridge \
+            --network podman \
             -p 8080:8000 \
             -v 1money-data:/data:Z \
             ${{ needs.publish.outputs.image }}:latest
