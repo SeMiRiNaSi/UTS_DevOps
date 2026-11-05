@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="id">
 
@@ -8,14 +7,14 @@
   <title>1Money</title>
   <style>
     :root {
-      --bg: #f7f5fc;
+      --bg: #f5f7fb;
       --card: #fff;
-      --ink: #25213a;
-      --muted: #716d80;
-      --line: #e6e2ef;
-      --brand: #7048d8;
-      --in: #16835f;
-      --out: #d04422;
+      --ink: #1d2433;
+      --muted: #667085;
+      --line: #e4e7ec;
+      --brand: #2f5bea;
+      --in: #12805c;
+      --out: #c4320a;
     }
 
     * {
@@ -49,16 +48,14 @@
     .card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 16px;
+      border-radius: 12px;
       padding: 16px;
       margin-bottom: 16px;
-      box-shadow: 0 2px 6px rgba(60, 40, 100, 0.04);
     }
 
     .saldo {
       font-size: 2rem;
       font-weight: 700;
-      color: var(--brand);
     }
 
     form.tambah {
@@ -83,29 +80,18 @@
       width: 100%;
       padding: 10px;
       border: 1px solid var(--line);
-      border-radius: 9px;
+      border-radius: 8px;
       font: inherit;
-      background: #fff;
-    }
-
-    input:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--brand);
     }
 
     button {
       padding: 10px 14px;
       border: 0;
-      border-radius: 9px;
+      border-radius: 8px;
       background: var(--brand);
       color: #fff;
       font: inherit;
       cursor: pointer;
-    }
-
-    button:hover {
-      opacity: .9;
     }
 
     button.hapus {
@@ -157,44 +143,30 @@
 
 <body>
   <main>
-    <h1>1Money Kas</h1>
-    <p class="sub">Pencatatan keuangan organisasi mahasiswa</p>
+    <h1>1Money</h1>
+    <p class="sub">Pencatatan kas organisasi mahasiswa</p>
 
     <div class="card">
-      <div class="sub" style="margin:0">Total saldo</div>
+      <div class="sub" style="margin:0">Saldo saat ini</div>
       <div class="saldo">Rp {{ "{:,}".format(saldo).replace(",", ".") }}</div>
     </div>
 
     <div class="card">
       {% if error %}<div class="err">{{ error }}</div>{% endif %}
       <form class="tambah" method="post" action="{{ url_for('tambah') }}">
-        <div>
-          <label for="tanggal">Tanggal</label>
-          <input id="tanggal" name="tanggal" type="date" value="{{ hari_ini }}">
+        <div><label for="tanggal">Tanggal</label><input id="tanggal" name="tanggal" type="date" value="{{ hari_ini }}">
         </div>
-
-        <div>
-          <label for="jenis">Jenis Transaksi</label>
+        <div><label for="jenis">Jenis</label>
           <select id="jenis" name="jenis">
             <option value="masuk">Pemasukan</option>
             <option value="keluar">Pengeluaran</option>
           </select>
         </div>
-
-        <div class="full">
-          <label for="keterangan">Keterangan</label>
-          <input id="keterangan" name="keterangan" required
-            placeholder="Contoh: Iuran kas bulan November">
+        <div class="full"><label for="keterangan">Keterangan</label><input id="keterangan" name="keterangan" required
+            placeholder="Contoh: Iuran kas bulan November"></div>
+        <div><label for="jumlah">Jumlah (Rp)</label><input id="jumlah" name="jumlah" type="number" min="1" required>
         </div>
-
-        <div>
-          <label for="jumlah">Nominal (Rp)</label>
-          <input id="jumlah" name="jumlah" type="number" min="1" required>
-        </div>
-
-        <div style="align-self:end">
-          <button type="submit">Simpan Transaksi</button>
-        </div>
+        <div style="align-self:end"><button type="submit">Simpan</button></div>
       </form>
     </div>
 
@@ -204,41 +176,33 @@
           <tr>
             <th>Tanggal</th>
             <th>Keterangan</th>
-            <th class="num">Nominal</th>
+            <th class="num">Jumlah</th>
             <th></th>
           </tr>
         </thead>
-
         <tbody>
           {% for t in transaksi %}
           <tr>
             <td>{{ t.tanggal }}</td>
             <td>{{ t.keterangan }}</td>
-            <td class="num {{ t.jenis }}">
-              {{ "+" if t.jenis == "masuk" else "-" }}{{
-              "{:,}".format(t.jumlah).replace(",", ".") }}
-            </td>
+            <td class="num {{ t.jenis }}">{{ "+" if t.jenis == "masuk" else "-" }}{{
+              "{:,}".format(t.jumlah).replace(",", ".") }}</td>
             <td class="num">
-              <form method="post" action="{{ url_for('hapus', trx_id=t.id) }}">
-                <button class="hapus" title="Hapus">Hapus Data</button>
-              </form>
+              <form method="post" action="{{ url_for('hapus', trx_id=t.id) }}"><button class="hapus"
+                  title="Hapus">Hapus</button></form>
             </td>
           </tr>
-
           {% else %}
           <tr>
-            <td colspan="4" style="color:var(--muted)">
-              Belum ada transaksi.
-            </td>
+            <td colspan="4" style="color:var(--muted)">Belum ada transaksi.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <footer>1Money • Versi {{ versi }}</footer>
+    <footer>1Money versi {{ versi }}</footer>
   </main>
 </body>
 
 </html>
-```
