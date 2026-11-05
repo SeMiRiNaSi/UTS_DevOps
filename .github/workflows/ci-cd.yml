@@ -123,7 +123,7 @@ jobs:
       - name: Pull image terbaru
         run: podman pull ${{ needs.publish.outputs.image }}:latest
 
-      - name: Ganti container lama dengan yang baru
+      - name: Ganti container lama dengan yang baru secara otomatis
         run: |
           podman rm -f 1money || true
           podman run -d --name 1money \
@@ -131,7 +131,7 @@ jobs:
             -v 1money-data:/data:Z \
             ${{ needs.publish.outputs.image }}:latest
 
-      - name: Health check
+      - name: Health check otomatis
         run: |
           sleep 10
           for i in $(seq 1 30); do
