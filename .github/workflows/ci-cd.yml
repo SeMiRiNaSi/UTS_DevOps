@@ -75,7 +75,7 @@ jobs:
     name: Publish Image ke GHCR
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
@@ -135,13 +135,13 @@ jobs:
 
       - name: Health check
         run: |
-          sleep 15
-          for i in $(seq 1 40); do
+          sleep 20
+          for i in $(seq 1 60); do
             if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
               echo "Container 1money berhasil berjalan dan sehat!"
               exit 0
             fi
-            echo "Menunggu aplikasi 1money di port 8080 (percobaan $i/40)..."
+            echo "Menunggu aplikasi 1money di port 8080 (percobaan $i/60)..."
             sleep 3
           done
           podman logs 1money
