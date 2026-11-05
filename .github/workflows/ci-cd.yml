@@ -51,9 +51,9 @@ jobs:
       - name: Smoke test container (Docker)
         run: |
           docker run -d --name kas-test -p 8000:8000 1money:ci
+          sleep 5
           for i in $(seq 1 15); do
-            curl -fsS http://localhost:8000/health && exit 0
-            sleep 2
+            curl -fsS http://localhost:8000/health && exit 0 || sleep 2
           done
           docker logs kas-test
           exit 1
@@ -130,9 +130,9 @@ jobs:
 
       - name: Health check
         run: |
+          sleep 5
           for i in $(seq 1 15); do
-            curl -fsS http://localhost:8080/health && exit 0
-            sleep 2
+            curl -fsS http://localhost:8080/health && exit 0 || sleep 2
           done
           podman logs 1money
           exit 1
